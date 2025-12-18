@@ -14,23 +14,39 @@
       <div class="content-container">
         
         <section class="info-card">
-          <div class="info-item"><span class="label">姓名：</span><span class="value">{{ userInfo.name }}</span></div>
-          <div class="info-item"><span class="label">学校：</span><span class="value">{{ userInfo.school }}</span></div>
-          <div class="info-item"><span class="label">手机号：</span><span class="value">{{ userInfo.phone }}</span></div>
-          <div class="info-item"><span class="label">证书编号：</span><span class="value">{{ userInfo.certificateNo }}</span></div>
-          <div class="info-item"><span class="label">课程成绩：</span><span class="value">{{ userInfo.score }}</span></div>
-          <div class="info-item"><span class="label">成绩等级：</span><span class="value">{{ userInfo.grade }}</span></div>
+          <div class="batch-selector" v-if="userList.length > 1">
+            <span class="label">选择期数：</span>
+            <el-select 
+              v-model="currentIndex" 
+              placeholder="请选择" 
+              @change="handleBatchChange"
+              size="large"
+              style="width: 200px;"
+            >
+              <el-option
+                v-for="(item, index) in userList"
+                :key="item.id"
+                :label="item.sessions || ('第' + (index + 1) + '条记录')"
+                :value="index"
+              />
+            </el-select>
+          </div>
+          
+          <div class="info-item"><span class="label">姓名：</span><span class="value">{{ currentUser.name }}</span></div>
+          <div class="info-item"><span class="label">期数：</span><span class="value">{{ currentUser.sessions || '默认' }}</span></div>
+          <div class="info-item"><span class="label">证书编号：</span><span class="value">{{ currentUser.certificateNo }}</span></div>
+          <div class="info-item"><span class="label">课程成绩：</span><span class="value">{{ currentUser.score }}</span></div>
+          <div class="info-item"><span class="label">成绩等级：</span><span class="value">{{ currentUser.level }}</span></div>
+          <div class="info-item"><span class="label">学校/单位：</span><span class="value">{{ currentUser.category }}</span></div>
         </section>
 
         <section class="image-card">
           <div class="image-wrapper paper-effect" v-loading="loadingPreview" element-loading-text="证书生成中...">
-            
             <img 
               :src="previewUrl || defaultImg" 
               class="cert-image"
               alt="证书预览"
             >
-
           </div>
           
           <div class="action-area">
@@ -47,12 +63,12 @@
       </div>
     </main>
     
-    <footer class="page-footer">版权所有 © 2024 江苏师范大学 | 授权码：JSNU-2024-XYZ</footer>
+    <footer class="page-footer">版权所有 © 2025 江苏师范大学</footer>
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted, ref } from 'vue'
+import { reactive, onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
@@ -61,70 +77,102 @@ import { Refresh, Download } from '@element-plus/icons-vue'
 const router = useRouter()
 const loadingPreview = ref(false)
 const previewUrl = ref('')
+// 默认图片
 const defaultImg = 'https://img.freepik.com/free-photo/view-electronic-product-with-futuristic-design_23-2151073307.jpg'
 
-const userInfo = reactive({
-  name: '', school: '', phone: '', certificateNo: '', score: '', grade: ''
+// 核心数据
+const userList = ref([]) // 存所有期的数据
+const currentIndex = ref(0) // 当前选的是第几个
+
+// 计算属性：永远指向当前选中的那一条
+const currentUser = computed(() => {
+  return userList.value[currentIndex.value] || {}
 })
 
 onMounted(() => {
-  const userStr = localStorage.getItem('user')
-  if (!userStr) {
+  // 1. 从 localStorage 读取登录时存进去的列表
+  const listStr = localStorage.getItem('userList')
+  
+  if (!listStr) {
     router.push('/') 
   } else {
     try {
-      const userData = JSON.parse(userStr)
-      userInfo.name = userData.name || '未知'
-      userInfo.school = userData.category || '暂无'
-      userInfo.phone = userData.phone || '暂无'
-      userInfo.certificateNo = userData.certificateNo || '暂无'
-      userInfo.score = userData.score || '暂无'
-      userInfo.grade = userData.level || '暂无'
-
-      if (userInfo.phone) handlePreview(true)
+      userList.value = JSON.parse(listStr)
+      
+      // 恢复上次选中的 index (如果有)
+      const savedIndex = localStorage.getItem('currentUserIndex')
+      if (savedIndex) {
+        currentIndex.value = parseInt(savedIndex)
+      }
+      
+      // 自动加载第一张图
+      if (userList.value.length > 0) {
+        handlePreview(true)
+      }
     } catch (e) {
+      console.error(e)
       router.push('/')
     }
   }
 })
 
+// 切换期数
+const handleBatchChange = (val) => {
+  // 记住所选位置
+  localStorage.setItem('currentUserIndex', val)
+  // 清空旧图，加载新图
+  previewUrl.value = ''
+  handlePreview(true)
+}
+
+// 预览逻辑
 const handlePreview = async (isAuto = false) => {
-  if (!userInfo.phone) return
+  // 🔥 关键修改：判断 id 是否存在
+  const uid = currentUser.value.id
+  if (!uid) return
+
   loadingPreview.value = true
-  // 仅在手动刷新时清空，避免闪烁
+  // 手动点击时才清空，防止自动加载闪烁
   if (!isAuto) previewUrl.value = '' 
 
   try {
-    // 请求后端 (后端现在返回的是图片流)
-    const res = await axios.get(`/api/teacher/previewCertificate?phone=${userInfo.phone}`, {
+    // 🔥 关键修改：参数改为 id
+    const res = await axios.get(`/api/teacher/previewCertificate?id=${uid}`, {
       responseType: 'blob'
     })
     
-    // 这里 type 改为 image/png
     const blob = new Blob([res.data], { type: 'image/png' })
-    
     if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
     previewUrl.value = URL.createObjectURL(blob)
     
     if (!isAuto) ElMessage.success('预览刷新成功')
   } catch (err) {
     console.error(err)
-    if (!isAuto) ElMessage.error('证书预览加载失败')
+    if (!isAuto) ElMessage.error('加载失败，请检查后台日志')
   } finally {
     loadingPreview.value = false
   }
 }
 
+// 下载逻辑
 const handleDownload = () => {
-  if (!userInfo.phone) return
+  const uid = currentUser.value.id
+  if (!uid) {
+    ElMessage.warning('数据异常，无法下载')
+    return
+  }
   ElMessage.success('正在请求下载...')
+  
+  // 🔥 关键修改：参数改为 id
   const link = document.createElement('a')
-  link.href = `/api/teacher/downloadCertificate?phone=${userInfo.phone}`
+  link.href = `/api/teacher/downloadCertificate?id=${uid}`
   link.target = '_blank'
   link.click()
 }
 
 const handleLogout = () => {
+  localStorage.removeItem('userList')
+  localStorage.removeItem('currentUserIndex')
   localStorage.removeItem('user')
   router.push('/')
 }
@@ -168,9 +216,18 @@ const handleLogout = () => {
 }
 
 .info-card { flex: 1; padding: 50px; display: flex; flex-direction: column; justify-content: center; }
-.info-item { margin-bottom: 20px; font-size: 20px; color: #1a2a3a; display: flex; align-items: baseline; }
+.info-item { margin-bottom: 20px; font-size: 18px; color: #1a2a3a; display: flex; align-items: baseline; }
 .label { font-weight: bold; margin-right: 10px; min-width: 100px; text-align: right; }
 .value { font-family: monospace; font-weight: 500; }
+
+.batch-selector {
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.5);
+  padding: 10px;
+  border-radius: 8px;
+}
 
 .image-card {
   flex: 1; 
@@ -186,15 +243,11 @@ const handleLogout = () => {
   width: 100%;
   aspect-ratio: 1.414 / 1; 
   height: auto; 
-  
   border: 1px solid #dcdfe6; 
   border-radius: 4px; 
   overflow: hidden;
-  
   margin-bottom: 25px;
   background: white;
-  
-  /* 弹性布局，确保图片居中 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -203,7 +256,6 @@ const handleLogout = () => {
 .cert-image {
   width: 100%;
   height: 100%;
-  /* 关键属性：让图片包含在容器内，不裁剪，留白部分透明（或白底） */
   object-fit: contain; 
   display: block;
 }
