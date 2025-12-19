@@ -2,22 +2,25 @@
   <div class="login-page">
     <header class="page-header">
       <img 
-        src="https://img.icons8.com/color/96/university.png" 
+        src="https://raw.githubusercontent.com/FateTrickster/IWLYN_IMG/main/cdnimg/school-logo.png" 
         alt="校徽" 
         class="logo"
       >
-      <div class="header-title">江苏师范大学科研教育平台</div>
+      <div class="header-title">中小学教师素养证书发放平台</div>
     </header>
 
     <main class="main-content">
       <div class="login-box">
         
         <div class="left-panel">
-          <div class="panel-content">
-            <h2 class="panel-title">科技融合风 (EdTech Fusion)<br>核心理念：</h2>
-            <p class="panel-text">
-              在保留学校红色的基础上，引入“科技蓝”，体现教育与技术的交叉学科特点。适合实验室主页、科研成果展示。
-            </p>
+          <div class="title-box">
+            <h1 class="main-title">通知：</h1>
+            
+            <div class="sub-title">
+              <p class="notice-item">
+                由于技术调整，证书下载延后一天
+              </p>
+            </div>
           </div>
           <div class="bg-decoration"></div>
         </div>
@@ -56,6 +59,15 @@
             </el-form-item>
 
             <el-form-item>
+              <el-input 
+                v-model="form.secretKey" 
+                placeholder="测试密钥 (非测试期间无需填写)" 
+                prefix-icon="Key"
+                size="large"
+              />
+            </el-form-item>
+
+            <el-form-item>
               <el-button 
                 type="danger" 
                 :loading="loading" 
@@ -77,7 +89,7 @@
     </main>
 
     <footer class="page-footer">
-      版权所有 © 2024 江苏师范大学 | 授权码：JSNU-2024-XYZ
+      版权所有 © 2025 江苏师范大学 | 授权码：JSNU-2024-XYZ
     </footer>
 
     <el-dialog v-model="dialogVisible" title="找回账号" width="400px" align-center>
@@ -114,7 +126,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Key } from '@element-plus/icons-vue'
 import axios from 'axios'
 
 const router = useRouter()
@@ -126,7 +138,7 @@ const loginFormRef = ref()
 const recoverFormRef = ref()
 
 // === 数据模型 ===
-const form = reactive({ username: '', password: '' })
+const form = reactive({ username: '', password: '', secretKey: '' })
 const recoverForm = reactive({ name: '', idCard: '' })
 
 // === 🔥 核心：验证规则定义 ===
@@ -249,12 +261,14 @@ const handleRecover = async (formEl) => {
 }
 .login-box {
   display: flex;
-  width: 900px;
-  height: 450px;
+  /* 🔥 1. 宽度必须和 viewport (1000) 一模一样 */
+  width: 1000px;
+  height: 550px; /* 高度也可以适当加大 */
   background: white;
-  border-radius: 12px;
+  /* 🔥 2. 去掉圆角 (贴边时直角更好看) */
+  border-radius: 0;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
 }
 .left-panel {
   width: 55%;
@@ -362,5 +376,35 @@ const handleRecover = async (formEl) => {
   margin-bottom: 20px;
   color: #666;
   font-size: 14px;
+}
+
+/* 确保左侧文字区域排版舒适 */
+.main-title {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 25px;
+  color: #000; /* 🔥 已修改为黑色 */
+}
+
+/* 修改内容列表样式 */
+.sub-title {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #333; /* 🔥 已修改为深黑色 (比纯黑看着舒服一点) */
+  text-align: justify;
+  font-weight: 500; /* 稍微加粗一点点，防止在浅色背景上看不清 */
+}
+
+.notice-item {
+  margin-bottom: 15px;
+}
+/* 布局容器（显式提供，便于控制） */
+.login-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center; /* 垂直居中 */
+  background-color: #f0f2f5;
 }
 </style>

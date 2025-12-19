@@ -42,11 +42,11 @@
 
         <section class="image-card">
           <div class="image-wrapper paper-effect" v-loading="loadingPreview" element-loading-text="证书生成中...">
-            <img 
-              :src="previewUrl || defaultImg" 
-              class="cert-image"
-              alt="证书预览"
-            >
+            <el-image :src="previewUrl || defaultImg" fit="contain" class="cert-image">
+               <template #error>
+                  <div class="image-slot">证书生成中或未找到</div>
+               </template>
+            </el-image>
           </div>
           
           <div class="action-area">
@@ -156,18 +156,18 @@ const handlePreview = async (isAuto = false) => {
 
 // 下载逻辑
 const handleDownload = () => {
-  const uid = currentUser.value.id
-  if (!uid) {
-    ElMessage.warning('数据异常，无法下载')
-    return
-  }
-  ElMessage.success('正在请求下载...')
-  
-  // 🔥 关键修改：参数改为 id
-  const link = document.createElement('a')
-  link.href = `/api/teacher/downloadCertificate?id=${uid}`
-  link.target = '_blank'
-  link.click()
+    const uid = currentUser.value.id
+    if (!uid) {
+        ElMessage.warning('数据异常，无法下载')
+        return
+    }
+    
+    if (previewUrl.value) {
+        // 直接打开 PDF 链接，浏览器会自动处理
+        window.open(`/api/teacher/downloadCertificate?id=${uid}`, '_blank');
+    } else {
+        ElMessage.warning('未找到证书文件');
+    }
 }
 
 const handleLogout = () => {
@@ -258,6 +258,17 @@ const handleLogout = () => {
   height: 100%;
   object-fit: contain; 
   display: block;
+}
+
+.image-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: #f5f7fa;
+  color: #909399;
+  font-size: 14px;
 }
 
 .action-area { width: 100%; display: flex; gap: 15px; }
